@@ -544,6 +544,30 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="reviews">
+            {hasCompany ? (
+              <ReviewList
+                companyId={companyDataValue.id}
+                companyName={companyDataValue.name}
+              />
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Star className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">
+                    No Company Profile
+                  </h4>
+                  <p className="text-gray-600 mb-4">
+                    Create a company profile to receive customer reviews
+                  </p>
+                  <Button onClick={() => router.push('/dashboard/company/create')}>
+                    Create Company Profile
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           <TabsContent value="analytics">
             <Card>
               <CardHeader>
