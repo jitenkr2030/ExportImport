@@ -7,13 +7,17 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const country = searchParams.get('country')
     const category = searchParams.get('category')
+    const verified = searchParams.get('verified')
+    const sort = searchParams.get('sort') || 'relevance'
+    const minPrice = searchParams.get('minPrice')
+    const maxPrice = searchParams.get('maxPrice')
     const limit = parseInt(searchParams.get('limit') || '20')
 
     // Build where clause
     let whereClause: any = {
       isActive: true,
       company: {
-        isVerified: true // Only show products from verified companies
+        isVerified: verified === 'true' ? true : undefined
       }
     }
 
@@ -26,10 +30,45 @@ export async function GET(request: NextRequest) {
     }
 
     if (country && country !== 'all') {
-      whereClause.company = {
-        ...whereClause.company,
-        country: country
+      if (whereClause.company) {
+        whereClause.company.country = country
+      } else {
+        whereClause.company = { country }
       }
+    }
+
+    // Price filtering
+    if (minPrice || maxPrice) {
+      whereClause.price = {}
+      if (minPrice) {
+        whereClause.price.gte = parseFloat(minPrice)
+      }
+      if (maxPrice) {
+        whereClause.price.lte = parseFloat(maxPrice)
+      }
+    }
+
+    // Build order clause
+    let orderBy: any = { createdAt: 'desc' }
+    
+    switch (sort) {
+      case 'price_low':
+        orderBy = { price: 'asc' }
+        break
+      case 'price_high':
+        orderBy = { price: 'desc' }
+        break
+      case 'verified':
+        orderBy = [
+          { company: { isVerified: 'desc' } },
+          { createdAt: 'desc' }
+        ]
+        break
+      case 'newest':
+        orderBy = { createdAt: 'desc' }
+        break
+      default:
+        orderBy = { createdAt: 'desc' }
     }
 
     // Get products with company information
@@ -57,7 +96,7 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       take: limit
     })
 

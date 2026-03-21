@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Star, Send, X } from 'lucide-react'
+import { Star, MessageSquare, X } from 'lucide-react'
 
 interface ReviewFormProps {
   companyId: string
@@ -14,12 +14,7 @@ interface ReviewFormProps {
   onCancel?: () => void
 }
 
-export default function ReviewForm({ 
-  companyId, 
-  companyName, 
-  onReviewSubmitted,
-  onCancel 
-}: ReviewFormProps) {
+export default function ReviewForm({ companyId, companyName, onReviewSubmitted, onCancel }: ReviewFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -27,8 +22,8 @@ export default function ReviewForm({
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
 
-  const handleStarClick = (selectedRating: number) => {
-    setRating(selectedRating)
+  const handleStarClick = (starRating: number) => {
+    setRating(starRating)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,14 +47,14 @@ export default function ReviewForm({
         body: JSON.stringify({
           companyId,
           rating,
-          comment: comment.trim() || null
+          comment
         }),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        setSuccess('Review submitted successfully! Thank you for your feedback.')
+        setSuccess('Thank you for your review!')
         setRating(0)
         setComment('')
         
@@ -70,7 +65,7 @@ export default function ReviewForm({
         setTimeout(() => {
           setIsOpen(false)
           setSuccess('')
-        }, 3000)
+        }, 2000)
       } else {
         setError(data.error || 'Failed to submit review')
       }
@@ -131,53 +126,49 @@ export default function ReviewForm({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Rating *</label>
-            <div className="flex space-x-1">
+            <div className="flex space-x-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   type="button"
                   onClick={() => handleStarClick(star)}
-                  className="p-1 hover:scale-110 transition-transform"
+                  className="transition-colors"
                 >
                   <Star
-                    className={`w-6 h-6 ${
+                    className={`w-8 h-8 ${
                       star <= rating
                         ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-gray-300'
+                        : 'text-gray-300 hover:text-yellow-400'
                     }`}
                   />
                 </button>
               ))}
             </div>
             <p className="text-sm text-gray-500">
-              Click to rate {rating > 0 && `(${rating} star${rating !== 1 ? 's' : ''})`}
+              Click to rate (1 = Poor, 5 = Excellent)
             </p>
           </div>
 
           <div className="space-y-2">
             <label htmlFor="comment" className="text-sm font-medium">
-              Your Review (Optional)
+              Your Review
             </label>
             <Textarea
               id="comment"
-              placeholder="Share details about your experience..."
+              placeholder="Share your experience with this company..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={4}
-              maxLength={500}
             />
-            <p className="text-sm text-gray-500">
-              {comment.length}/500 characters
-            </p>
           </div>
 
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 mb-2">Review Guidelines</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Be honest and fair in your assessment</li>
+              <li>• Be honest and specific in your review</li>
               <li>• Focus on your actual experience</li>
-              <li>• Provide specific details when possible</li>
-              <li>• Keep it professional and respectful</li>
+              <li>• Avoid offensive language</li>
+              <li>• Your review will help other buyers make informed decisions</li>
             </ul>
           </div>
 
@@ -196,19 +187,9 @@ export default function ReviewForm({
             <Button
               type="submit"
               className="flex-1"
-              disabled={isLoading || rating === 0}
+              disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Submit Review
-                </>
-              )}
+              {isLoading ? 'Submitting...' : 'Submit Review'}
             </Button>
           </div>
         </form>

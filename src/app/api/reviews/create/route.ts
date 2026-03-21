@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user already reviewed this company
+    // Check if user has already reviewed this company
     const existingReview = await db.review.findFirst({
       where: {
         userId: session.user.id,
@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
       include: {
         user: {
           select: {
-            name: true
+            name: true,
+            email: true
           }
         }
       }

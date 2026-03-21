@@ -250,3 +250,32 @@ prisma:query SELECT `main`.`Company`.`id`, `main`.`Company`.`name`, `main`.`Comp
  GET /api/products/all? 200 in 9ms (compile: 1709µs, render: 7ms)
  GET /api/auth/session 200 in 63ms (compile: 51ms, render: 12ms)
  GET /api/placeholder/400/300 404 in 53ms (compile: 16ms, render: 38ms)
+==========================================
+[2026-03-21 22:51:42] Starting: bun install
+==========================================
+[BUN] Installing dependencies...
+[0.08ms] ".env"
+bun install v1.3.10 (30e609e0)
+
+Checked 850 installs across 919 packages (no changes) [55.00ms]
+==========================================
+[2026-03-21 22:51:42] Completed: bun install
+[LOG] Step: bun install | Duration: 0s
+==========================================
+
+==========================================
+[2026-03-21 22:51:42] Starting: bun run db:push
+==========================================
+[BUN] Setting up database...
+$ prisma db push
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "custom.db" at "file:/home/z/my-project/db/custom.db"
+
+⚠️  There might be data loss when applying the changes:
+
+  • You are about to drop the `Company` table, which is not empty (2 rows).
+
+
+Error: Use the --accept-data-loss flag to ignore the data loss warnings like prisma db push --accept-data-loss
+error: script "db:push" exited with code 1

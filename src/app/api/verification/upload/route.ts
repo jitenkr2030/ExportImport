@@ -34,9 +34,22 @@ export async function POST(request: NextRequest) {
         type,
         fileUrl,
         fileName,
-        companyId: company.id
+        companyId: company.id,
+        status: 'PENDING'
       }
     })
+
+    // Update company verification status if this is the first document
+    const existingDocuments = await db.verificationDocument.findMany({
+      where: { companyId: company.id }
+    })
+
+    if (existingDocuments.length === 1) {
+      await db.company.update({
+        where: { id: company.id },
+        data: { verificationStatus: 'PENDING' }
+      })
+    }
 
     return NextResponse.json(document, { status: 201 })
   } catch (error) {

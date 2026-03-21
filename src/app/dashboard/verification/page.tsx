@@ -10,18 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Upload, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  XCircle, 
-  ArrowLeft, 
-  AlertTriangle,
-  Download,
-  Eye
-} from 'lucide-react'
+import { Upload, FileText, CheckCircle, Clock, AlertCircle, ArrowLeft, Eye, Download, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function Verification() {
@@ -40,9 +29,9 @@ export default function Verification() {
 
   const documentTypes = [
     { value: 'BUSINESS_LICENSE', label: 'Business License' },
-    { value: 'GST', label: 'GST Certificate' },
-    { value: 'IEC', label: 'IEC Code' },
-    { value: 'CERTIFICATE', label: 'Other Certificate' },
+    { value: 'GST', label: 'GST Registration' },
+    { value: 'IEC', label: 'Import Export Code' },
+    { value: 'CERTIFICATE', label: 'Certificate of Incorporation' },
     { value: 'OTHER', label: 'Other Document' }
   ]
 
@@ -54,12 +43,12 @@ export default function Verification() {
 
   useEffect(() => {
     if (session?.user?.id) {
-      fetchCompanyData()
+      fetchCompany()
       fetchDocuments()
     }
   }, [session])
 
-  const fetchCompanyData = async () => {
+  const fetchCompany = async () => {
     try {
       const response = await fetch('/api/company/my-company')
       if (response.ok) {
@@ -105,18 +94,19 @@ export default function Verification() {
         body: formData
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        const data = await response.json()
         setUploadForm(prev => ({
           ...prev,
-          fileUrl: data.url,
+          fileUrl: data.fileUrl,
           fileName: file.name
         }))
       } else {
-        setError('Failed to upload file')
+        setError(data.error || 'Failed to upload file')
       }
     } catch (error) {
-      setError('An error occurred during file upload')
+      setError('Failed to upload file')
     } finally {
       setIsLoading(false)
     }
@@ -129,7 +119,7 @@ export default function Verification() {
     setSuccess('')
 
     if (!uploadForm.fileUrl || !uploadForm.fileName) {
-      setError('Please upload a document')
+      setError('Please upload a file')
       setIsLoading(false)
       return
     }
@@ -149,7 +139,10 @@ export default function Verification() {
         setSuccess('Document uploaded successfully!')
         setUploadForm({ type: 'BUSINESS_LICENSE', fileUrl: '', fileName: '' })
         fetchDocuments()
-        fetchCompanyData() // Refresh company data to update verification status
+        
+        // Reset file input
+        const fileInput = document.getElementById('file-upload') as HTMLInputElement
+        if (fileInput) fileInput.value = ''
       } else {
         setError(data.error || 'Failed to upload document')
       }
@@ -160,21 +153,16 @@ export default function Verification() {
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'APPROVED': return 'bg-green-100 text-green-800'
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800'
-      case 'REJECTED': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return <CheckCircle className="w-4 h-4" />
-      case 'PENDING': return <Clock className="w-4 h-4" />
-      case 'REJECTED': return <XCircle className="w-4 h-4" />
-      default: return <AlertTriangle className="w-4 h-4" />
+      case 'APPROVED':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
+      case 'PENDING':
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+      case 'REJECTED':
+        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Rejected</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
     }
   }
 
@@ -197,7 +185,7 @@ export default function Verification() {
           <CardHeader>
             <CardTitle>Company Profile Required</CardTitle>
             <CardDescription>
-              You need to create a company profile before accessing verification.
+              You need to create a company profile before uploading verification documents.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -231,175 +219,166 @@ export default function Verification() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Verification Status */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Company Verification</h1>
+          <p className="text-gray-600 mt-2">
+            Upload verification documents to build trust with potential buyers and get verified badge.
+          </p>
+        </div>
+
+        {/* Company Verification Status */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Company Verification Status</span>
-              <Badge className={getStatusColor(company.verificationStatus)}>
-                {getStatusIcon(company.verificationStatus)}
-                <span className="ml-1">{company.verificationStatus}</span>
-              </Badge>
+              <span>Verification Status</span>
+              {getStatusBadge(company.verificationStatus)}
             </CardTitle>
             <CardDescription>
-              Get verified to build trust with potential buyers and increase your visibility.
+              {company.isVerified 
+                ? "Your company is verified! You'll appear higher in search results."
+                : "Upload documents to get your company verified."
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <FileText className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <h4 className="font-medium">Upload Documents</h4>
-                <p className="text-sm text-gray-600">Submit verification documents</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <CheckCircle className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <h4 className="font-medium">Build Trust</h4>
+                <p className="text-sm text-gray-600">Verified companies get more inquiries</p>
               </div>
-              <div className="text-center p-4 border rounded-lg">
-                <Clock className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-                <h4 className="font-medium">Review Process</h4>
-                <p className="text-sm text-gray-600">Admin review and approval</p>
+              <div className="p-4 bg-green-50 rounded-lg">
+                <Eye className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <h4 className="font-medium">Higher Visibility</h4>
+                <p className="text-sm text-gray-600">Appear at the top of search results</p>
               </div>
-              <div className="text-center p-4 border rounded-lg">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <h4 className="font-medium">Get Verified</h4>
-                <p className="text-sm text-gray-600">Receive verified badge</p>
+              <div className="p-4 bg-purple-50 rounded-lg">
+                <FileText className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                <h4 className="font-medium">Credibility Badge</h4>
+                <p className="text-sm text-gray-600">Show verification badge on your profile</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="upload" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="upload">Upload Documents</TabsTrigger>
-            <TabsTrigger value="documents">My Documents</TabsTrigger>
-          </TabsList>
+        {/* Upload Document Form */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Upload Verification Document</CardTitle>
+            <CardDescription>
+              Upload official business documents for verification. Accepted formats: PDF, JPG, PNG (Max 10MB)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-          <TabsContent value="upload">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload Verification Document</CardTitle>
-                <CardDescription>
-                  Upload official documents to verify your company identity and legitimacy.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+              {success && (
+                <Alert className="bg-green-50 border-green-200">
+                  <AlertDescription className="text-green-800">{success}</AlertDescription>
+                </Alert>
+              )}
 
-                  {success && (
-                    <Alert className="bg-green-50 border-green-200">
-                      <AlertDescription className="text-green-800">{success}</AlertDescription>
-                    </Alert>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="document-type">Document Type</Label>
+                <Select value={uploadForm.type} onValueChange={(value) => handleInputChange('type', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select document type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {documentTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="documentType">Document Type</Label>
-                    <Select value={uploadForm.type} onValueChange={(value) => handleInputChange('type', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select document type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {documentTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="file">Upload Document</Label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="space-y-2">
+                <Label htmlFor="file-upload">Upload Document</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  <input
+                    id="file-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <div className="text-center">
                       <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <input
-                        type="file"
-                        id="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                      <label htmlFor="file" className="cursor-pointer">
-                        <Button type="button" variant="outline" asChild>
-                          <span>Choose File</span>
-                        </Button>
-                      </label>
-                      <p className="text-sm text-gray-500 mt-2">
+                      <p className="text-gray-600 mb-2">
+                        {uploadForm.fileName ? uploadForm.fileName : 'Click to upload or drag and drop'}
+                      </p>
+                      <p className="text-sm text-gray-500">
                         PDF, JPG, PNG up to 10MB
                       </p>
                     </div>
+                  </label>
+                </div>
+              </div>
 
-                    {uploadForm.fileName && (
-                      <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded">
-                        <FileText className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm">{uploadForm.fileName}</span>
-                      </div>
-                    )}
-                  </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || !uploadForm.fileUrl}
+              >
+                {isLoading ? 'Uploading...' : 'Upload Document'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading || !uploadForm.fileUrl}
-                  >
-                    {isLoading ? 'Uploading...' : 'Submit Document'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="documents">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Documents</CardTitle>
-                <CardDescription>
-                  Track the status of your verification documents.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {documents.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No documents uploaded yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <FileText className="w-4 h-4 text-gray-600" />
-                              <h4 className="font-medium">{doc.fileName}</h4>
-                              <Badge className={getStatusColor(doc.status)}>
-                                {getStatusIcon(doc.status)}
-                                <span className="ml-1">{doc.status}</span>
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                              Type: {doc.type} • Uploaded: {new Date(doc.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button size="sm" variant="outline">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          </div>
+        {/* Uploaded Documents */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Uploaded Documents</CardTitle>
+            <CardDescription>
+              Track the status of your verification documents
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {documents.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No documents uploaded yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-8 h-8 text-blue-600" />
+                        <div>
+                          <h4 className="font-medium">{doc.fileName}</h4>
+                          <p className="text-sm text-gray-500">
+                            {documentTypes.find(t => t.value === doc.type)?.label} • 
+                            Uploaded {new Date(doc.createdAt).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
-                    ))}
+                      <div className="flex items-center space-x-2">
+                        {getStatusBadge(doc.status)}
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
