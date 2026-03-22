@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import ReviewList from '@/components/ReviewList'
 import NotificationCenter from '@/components/NotificationCenter'
+import BusinessAnalytics from '@/components/BusinessAnalytics'
 import { 
   Building, 
   Package, 
@@ -482,63 +483,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="analytics">
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Analytics</CardTitle>
-                <CardDescription>Track your business performance and insights</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Performance Overview</h4>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Profile Views</span>
-                        <span className="font-medium">{stats.totalViews}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Inquiry Rate</span>
-                        <span className="font-medium">
-                          {products.length > 0 
-                            ? `${Math.round((stats.totalInquiries / (products.length * 10)) * 100)}%`
-                            : '0%'
-                          }
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Response Time</span>
-                        <span className="font-medium text-green-600">2.5 hours avg</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Top Products</h4>
-                    <div className="space-y-2">
-                      {products.slice(0, 3).map((product, index) => (
-                        <div key={product.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                          <span className="text-sm font-medium truncate">{product.name}</span>
-                          <span className="text-sm text-gray-600">
-                            {product._count.inquiries} inquiries
-                          </span>
-                        </div>
-                      ))}
-                      {products.length === 0 && (
-                        <p className="text-sm text-gray-500">No products yet</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-6 border-t">
-                  <h4 className="font-medium mb-4">Monthly Trends</h4>
-                  <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-8 h-8 text-gray-400" />
-                    <span className="text-gray-500 ml-2">Analytics chart coming soon</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <BusinessAnalytics />
           </TabsContent>
 
           <TabsContent value="settings">
