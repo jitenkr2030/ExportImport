@@ -22,7 +22,7 @@ export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications')
       if (response.ok) {
@@ -33,10 +33,31 @@ export default function NotificationCenter() {
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    fetchNotifications()
+    const controller = new AbortController()
+    
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications', { signal: controller.signal })
+        if (response.ok) {
+          const data = await response.json()
+          setNotifications(data)
+          setUnreadCount(data.filter((n: Notification) => !n.isRead).length)
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to fetch notifications:', error)
+        }
+      }
+    }
+    
+    loadNotifications()
+    
+    return () => {
+      controller.abort()
+    }
   }, [])
 
   const markAsRead = async (notificationId: string) => {

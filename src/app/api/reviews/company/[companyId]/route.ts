@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 export async function GET(
@@ -6,35 +8,73 @@ export async function GET(
   { params }: { params: { companyId: string } }
 ) {
   try {
-    const { companyId } = params
+    const { searchParams } = new URL(request.url)
+    const sortBy = searchParams.get('sortBy') || 'newest'
+    const limit = parseInt(searchParams.get('limit') || '10')
 
-    // Get all reviews for the company
+    const companyId = params.companyId
+
+    // Build order clause
+    let orderBy: any = { createdAt: 'desc' }
+    switch (sortBy) {
+      case 'oldest':
+        orderBy = { createdAt: 'asc' }
+        break
+      case 'highest':
+        orderBy = { rating: 'desc' }
+        break
+      case 'lowest':
+        orderBy = { rating: 'asc' }
+        break
+      default:
+        orderBy = { createdAt: 'desc' }
+    }
+
+    // Get reviews for the company
     const reviews = await db.review.findMany({
       where: { companyId },
       include: {
         user: {
           select: {
+            id: true,
             name: true,
-            email: true
+            email: true,
+            image: true
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy,
+      take: limit
     })
 
-    // Calculate average rating
-    const totalReviews = reviews.length
-    const averageRating = totalReviews > 0 
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews 
-      : 0
+    // Get user's review if authenticated
+    let userReview = null
+    const session = await getServerSession(authOptions)
+    if (session?.user?.id) {
+      userReview = await db.review.findFirst({
+        where: {
+          companyId,
+          userId: session.user.id
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          }
+        }
+      })
+    }
 
     return NextResponse.json({
       reviews,
-      averageRating,
-      totalReviews
+      userReview
     })
   } catch (error) {
-    console.error('Get company reviews error:', error)
+    console.error('Get reviews error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

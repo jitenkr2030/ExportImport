@@ -26,6 +26,7 @@ model User {
   company   Company?
   inquiries Inquiry[]
   reviews   Review[]
+  votes     ReviewVote[]
 }
 
 model Company {
@@ -118,10 +119,25 @@ model Inquiry {
   product     Product?     @relation(fields: [productId], references: [id])
 }
 
+model ReviewVote {
+  id          String   @id @default(cuid())
+  isHelpful  Boolean
+  createdAt   DateTime @default(now())
+  
+  reviewId    String
+  review      Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+}
+
 model Review {
   id        String   @id @default(cuid())
   rating    Int      // 1-5 stars
   comment   String?
+  helpful   Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -131,6 +147,10 @@ model Review {
   
   companyId String
   company   Company  @relation(fields: [companyId], references: [id])
+  
+  votes     ReviewVote[]
+
+  @@unique([companyId, userId])
 }
 
 model VerificationDocument {

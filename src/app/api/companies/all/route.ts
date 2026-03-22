@@ -6,10 +6,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const country = searchParams.get('country')
-    const category = searchParams.get('category')
     const verified = searchParams.get('verified')
-    const sort = searchParams.get('sort') || 'relevance'
     const limit = parseInt(searchParams.get('limit') || '20')
+    const sortBy = searchParams.get('sortBy') || 'relevance'
 
     // Build where clause
     let whereClause: any = {}
@@ -31,19 +30,13 @@ export async function GET(request: NextRequest) {
 
     // Build order clause
     let orderBy: any = { createdAt: 'desc' }
-    
-    switch (sort) {
-      case 'verified':
-        orderBy = [
-          { isVerified: 'desc' },
-          { createdAt: 'desc' }
-        ]
-        break
+    switch (sortBy) {
       case 'newest':
         orderBy = { createdAt: 'desc' }
         break
-      case 'oldest':
-        orderBy = { createdAt: 'asc' }
+      case 'rating':
+        // Would need to join with reviews for this
+        orderBy = { createdAt: 'desc' }
         break
       default:
         orderBy = { createdAt: 'desc' }
@@ -55,10 +48,8 @@ export async function GET(request: NextRequest) {
       include: {
         _count: {
           select: {
-            products: {
-              where: { isActive: true }
-            },
-            inquiries: true
+            products: true,
+            reviews: true
           }
         }
       },

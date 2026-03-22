@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, X, Building, Package, Globe, Star, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,63 +12,59 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Slider } from '@/components/ui/slider'
-import InquiryForm from '@/components/InquiryForm'
+import { Search, Filter, Globe, Package, Building, Star, CheckCircle, X, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SearchPage() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const searchParams = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
   const [activeTab, setActiveTab] = useState('products')
   const [products, setProducts] = useState<any[]>([])
   const [companies, setCompanies] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<any>(null)
-  const [showInquiryForm, setShowInquiryForm] = useState(false)
   
   // Filter states
   const [filters, setFilters] = useState({
     country: 'all',
-    priceRange: [0, 10000],
-    verifiedOnly: false,
     category: 'all',
+    minPrice: 0,
+    maxPrice: 10000,
+    verifiedOnly: false,
     sortBy: 'relevance'
   })
 
-  const countries = ['All Countries', 'United States', 'China', 'India', 'Brazil', 'Germany', 'Japan', 'United Kingdom', 'France', 'Italy', 'Canada', 'South Korea']
-  const categories = ['All Categories', 'Agriculture', 'Textiles', 'Machinery', 'Chemicals', 'Electronics', 'Food & Beverage']
+  const countries = [
+    'All Countries', 'United States', 'China', 'India', 'Brazil', 'Germany', 'Japan', 
+    'United Kingdom', 'France', 'Italy', 'Canada', 'South Korea', 'Spain', 'Mexico'
+  ]
+
+  const categories = [
+    'All Categories', 'Agriculture', 'Textiles', 'Machinery', 'Chemicals', 
+    'Electronics', 'Food & Beverage', 'Construction', 'Automotive', 'Healthcare'
+  ]
+
   const sortOptions = [
     { value: 'relevance', label: 'Relevance' },
     { value: 'price_low', label: 'Price: Low to High' },
     { value: 'price_high', label: 'Price: High to Low' },
     { value: 'newest', label: 'Newest First' },
-    { value: 'verified', label: 'Verified First' }
+    { value: 'rating', label: 'Highest Rated' }
   ]
 
   useEffect(() => {
-    // Get search query from URL
-    const urlParams = new URLSearchParams(window.location.search)
-    const query = urlParams.get('q')
-    if (query) {
-      setSearchQuery(query)
-    }
-    fetchData()
-  }, [])
-
-  useEffect(() => {
-    fetchData()
+    performSearch()
   }, [searchQuery, filters, activeTab])
 
-  const fetchData = async () => {
+  const performSearch = async () => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
       if (searchQuery) params.append('search', searchQuery)
       if (filters.country !== 'all') params.append('country', filters.country)
-      if (filters.verifiedOnly) params.append('verified', 'true')
       if (filters.category !== 'all') params.append('category', filters.category)
-      params.append('sort', filters.sortBy)
-      params.append('minPrice', filters.priceRange[0].toString())
-      params.append('maxPrice', filters.priceRange[1].toString())
+      if (filters.verifiedOnly) params.append('verified', 'true')
+      params.append('limit', '50')
 
       const endpoint = activeTab === 'products' ? '/api/products/all' : '/api/companies/all'
       const response = await fetch(`${endpoint}?${params}`)
@@ -76,11 +73,6 @@ export default function SearchPage() {
         const data = await response.json()
         if (activeTab === 'products') {
           setProducts(data)
-          // Extract unique companies from products
-          const uniqueCompanies = Array.from(
-            new Map(data.map((product: any) => [product.company.id, product.company])).values()
-          )
-          setCompanies(uniqueCompanies)
         } else {
           setCompanies(data)
         }
@@ -92,54 +84,64 @@ export default function SearchPage() {
     }
   }
 
-  const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    performSearch()
   }
 
   const clearFilters = () => {
     setFilters({
       country: 'all',
-      priceRange: [0, 10000],
-      verifiedOnly: false,
       category: 'all',
+      minPrice: 0,
+      maxPrice: 10000,
+      verifiedOnly: false,
       sortBy: 'relevance'
     })
   }
 
-  const activeFiltersCount = Object.entries(filters).filter(([key, value]) => 
-    key !== 'priceRange' && value !== 'all' && value !== false && value !== 'relevance'
-  ).length + (filters.priceRange[0] > 0 || filters.priceRange[1] < 10000 ? 1 : 0)
+  const activeFiltersCount = Object.values(filters).filter((value, index) => 
+    index < 5 && value !== 'all' && value !== 0 && value !== false
+  ).length
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16 space-x-4">
-            <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+          <div className="flex items-center h-16">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Globe className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">ExportImport</span>
             </Link>
-            <div className="flex-1 max-w-2xl">
-              <div className="relative">
+            
+            <div className="flex-1 max-w-2xl mx-8">
+              <form onSubmit={handleSearch} className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
+                  type="text"
                   placeholder="Search for products, companies, or categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4"
+                  className="pl-10 pr-10"
                 />
-              </div>
+                <Button type="submit" size="sm" className="absolute right-1 top-1">
+                  Search
+                </Button>
+              </form>
             </div>
+
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className="relative"
+              className="flex items-center space-x-2"
             >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
+              <SlidersHorizontal className="w-4 h-4" />
+              <span>Filters</span>
               {activeFiltersCount > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 text-xs flex items-center justify-center">
+                <Badge variant="secondary" className="ml-1">
                   {activeFiltersCount}
                 </Badge>
               )}
@@ -154,19 +156,17 @@ export default function SearchPage() {
           {showFilters && (
             <div className="w-80 flex-shrink-0">
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Filters</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      Clear All
-                    </Button>
-                  </div>
+                <CardHeader className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Filters</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    Clear all
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Country Filter */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Country</label>
-                    <Select value={filters.country} onValueChange={(value) => handleFilterChange('country', value)}>
+                    <Label>Country</Label>
+                    <Select value={filters.country} onValueChange={(value) => setFilters(prev => ({ ...prev, country: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -182,8 +182,8 @@ export default function SearchPage() {
 
                   {/* Category Filter */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Category</label>
-                    <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
+                    <Label>Category</Label>
+                    <Select value={filters.category} onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -197,38 +197,46 @@ export default function SearchPage() {
                     </Select>
                   </div>
 
-                  {/* Price Range Filter */}
+                  {/* Price Range (for products) */}
                   {activeTab === 'products' && (
                     <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Price Range: ${filters.priceRange[0]} - ${filters.priceRange[1]}
-                      </label>
-                      <Slider
-                        value={filters.priceRange}
-                        onValueChange={(value) => handleFilterChange('priceRange', value)}
-                        max={10000}
-                        step={100}
-                        className="mt-4"
-                      />
+                      <Label>Price Range</Label>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">${filters.minPrice}</span>
+                          <span className="text-sm text-gray-600">${filters.maxPrice}</span>
+                        </div>
+                        <Slider
+                          value={[filters.minPrice, filters.maxPrice]}
+                          onValueChange={(value) => setFilters(prev => ({ 
+                            ...prev, 
+                            minPrice: value[0], 
+                            maxPrice: value[1] 
+                          }))}
+                          max={10000}
+                          step={100}
+                          className="w-full"
+                        />
+                      </div>
                     </div>
                   )}
 
-                  {/* Verified Only Filter */}
+                  {/* Verified Only */}
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      id="verified-only"
+                      id="verified"
                       checked={filters.verifiedOnly}
-                      onCheckedChange={(checked) => handleFilterChange('verifiedOnly', checked)}
+                      onCheckedChange={(checked) => setFilters(prev => ({ ...prev, verifiedOnly: checked }))}
                     />
-                    <label htmlFor="verified-only" className="text-sm font-medium">
-                      Verified Companies Only
-                    </label>
+                    <Label htmlFor="verified" className="text-sm">
+                      Verified companies only
+                    </Label>
                   </div>
 
                   {/* Sort By */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Sort By</label>
-                    <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
+                    <Label>Sort By</Label>
+                    <Select value={filters.sortBy} onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -248,52 +256,46 @@ export default function SearchPage() {
 
           {/* Main Content */}
           <div className="flex-1">
-            {/* Results Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-              <TabsList>
-                <TabsTrigger value="products">
-                  Products ({products.length})
-                </TabsTrigger>
-                <TabsTrigger value="companies">
-                  Companies ({companies.length})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {/* Results Header */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {searchQuery ? `Results for "${searchQuery}"` : 'Browse All'}
+                  </h1>
+                  <p className="text-gray-600 mt-1">
+                    {activeTab === 'products' 
+                      ? `${products.length} products found`
+                      : `${companies.length} companies found`
+                    }
+                  </p>
+                </div>
+                
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList>
+                    <TabsTrigger value="products">Products</TabsTrigger>
+                    <TabsTrigger value="companies">Companies</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </div>
 
             {/* Loading State */}
             {isLoading && (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Searching...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 mt-4">Searching...</p>
               </div>
             )}
 
             {/* Products Results */}
             {!isLoading && activeTab === 'products' && (
-              <>
-                {showInquiryForm && selectedProduct && (
-                  <div className="mb-6">
-                    <InquiryForm
-                      companyId={selectedProduct.company.id}
-                      productId={selectedProduct.id}
-                      productName={selectedProduct.name}
-                      companyName={selectedProduct.company.name}
-                      onInquirySent={() => {
-                        setShowInquiryForm(false)
-                        setSelectedProduct(null)
-                      }}
-                      onCancel={() => {
-                        setShowInquiryForm(false)
-                        setSelectedProduct(null)
-                      }}
-                    />
-                  </div>
-                )}
-
+              <div className="space-y-4">
                 {products.length === 0 ? (
                   <div className="text-center py-12">
                     <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No products found matching your criteria.</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-600">Try adjusting your filters or search terms</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -345,16 +347,8 @@ export default function SearchPage() {
                           </div>
 
                           <div className="flex space-x-2">
-                            <Button 
-                              size="sm" 
-                              className="flex-1"
-                              onClick={() => {
-                                setSelectedProduct(product)
-                                setShowInquiryForm(true)
-                              }}
-                            >
-                              <Search className="w-4 h-4 mr-2" />
-                              Inquire
+                            <Button size="sm" className="flex-1">
+                              Contact Supplier
                             </Button>
                             <Button size="sm" variant="outline">
                               View Details
@@ -365,16 +359,17 @@ export default function SearchPage() {
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
 
             {/* Companies Results */}
             {!isLoading && activeTab === 'companies' && (
-              <>
+              <div className="space-y-4">
                 {companies.length === 0 ? (
                   <div className="text-center py-12">
                     <Building className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No companies found matching your criteria.</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No companies found</h3>
+                    <p className="text-gray-600">Try adjusting your filters or search terms</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -404,13 +399,25 @@ export default function SearchPage() {
                           </div>
                         </CardHeader>
                         <CardContent>
+                          <CardDescription className="mb-4">{company.description}</CardDescription>
+                          
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">4.5</span>
+                              <span className="text-sm text-gray-500">(127)</span>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {company._count?.products || 0} products
+                            </div>
+                          </div>
+
                           <div className="flex space-x-2">
                             <Button size="sm" className="flex-1">
-                              <Search className="w-4 h-4 mr-2" />
-                              View Products
+                              Contact
                             </Button>
                             <Button size="sm" variant="outline">
-                              Contact
+                              View Profile
                             </Button>
                           </div>
                         </CardContent>
@@ -418,7 +425,7 @@ export default function SearchPage() {
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>

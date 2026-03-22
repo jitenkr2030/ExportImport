@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { type, fileUrl, fileName } = await request.json()
+    const { type, fileName, fileUrl } = await request.json()
 
-    if (!type || !fileUrl || !fileName) {
+    if (!type || !fileName || !fileUrl) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -39,24 +39,11 @@ export async function POST(request: NextRequest) {
     const document = await db.verificationDocument.create({
       data: {
         type,
-        fileUrl,
         fileName,
-        companyId: company.id,
-        status: 'PENDING'
+        fileUrl,
+        companyId: company.id
       }
     })
-
-    // Update company verification status if this is the first document
-    const existingDocuments = await db.verificationDocument.findMany({
-      where: { companyId: company.id }
-    })
-
-    if (existingDocuments.length === 1) {
-      await db.company.update({
-        where: { id: company.id },
-        data: { verificationStatus: 'PENDING' }
-      })
-    }
 
     return NextResponse.json(document, { status: 201 })
   } catch (error) {

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -14,45 +14,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { companyId, rating, comment } = await request.json()
+    const { reviewId, rating, comment } = await request.json()
 
-    if (!companyId || !rating || !comment) {
+    if (!reviewId) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Review ID is required' },
         { status: 400 }
       )
     }
 
-    if (rating < 1 || rating > 5) {
+    if (rating && (rating < 1 || rating > 5)) {
       return NextResponse.json(
         { error: 'Rating must be between 1 and 5' },
         { status: 400 }
       )
     }
 
-    // Check if user already reviewed this company
+    // Check if review belongs to user
     const existingReview = await db.review.findFirst({
       where: {
-        companyId,
+        id: reviewId,
         userId: session.user.id
       }
     })
 
-    if (existingReview) {
+    if (!existingReview) {
       return NextResponse.json(
-        { error: 'You have already reviewed this company. Use update endpoint to modify your review.' },
-        { status: 400 }
+        { error: 'Review not found or unauthorized' },
+        { status: 404 }
       )
     }
 
-    // Create review
-    const review = await db.review.create({
-      data: {
-        rating,
-        comment,
-        companyId,
-        userId: session.user.id
-      },
+    // Update review
+    const updateData: any = {}
+    if (rating) updateData.rating = rating
+    if (comment) updateData.comment = comment
+
+    const review = await db.review.update({
+      where: { id: reviewId },
+      data: updateData,
       include: {
         user: {
           select: {
@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(review, { status: 201 })
+    return NextResponse.json(review)
   } catch (error) {
-    console.error('Create review error:', error)
+    console.error('Update review error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

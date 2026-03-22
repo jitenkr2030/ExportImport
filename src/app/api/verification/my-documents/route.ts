@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get verification documents
+    // Get verification documents for the company
     const documents = await db.verificationDocument.findMany({
       where: { companyId: company.id },
       orderBy: { createdAt: 'desc' }
